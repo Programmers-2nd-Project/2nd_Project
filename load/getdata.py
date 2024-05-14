@@ -1,18 +1,23 @@
-import requests
+
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from bs4 import BeautifulSoup
+
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
-from selenium.webdriver import ActionChains
+from selenium.webdriver.chrome.options import Options
+import os
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import csv
+
 import time
 from datetime import datetime,timedelta 
 
 from selenium.webdriver.support.ui import Select
+
+import boto3
+from botocore.exceptions import NoCredentialsError
+
 
 def set_search_period(driver, start_date, end_date):
     start_date_str = start_date.strftime("%Y-%m-%d")
@@ -56,16 +61,63 @@ def price_crawling(start_date, end_date):
 
 
     target_url = "https://www.opinet.co.kr/user/dopospdrg/dopOsPdrgSelect.do#" 
+    current_directory = os.getcwd()
 
-    with webdriver.Chrome(service=Service(ChromeDriverManager().install())) as driver:
+    # 다운로드 경로 설정: 현재 작업 디렉토리 + 'downloads' 폴더
+    download_path = os.path.join(current_directory, 'load')
+
+    # ChromeOptions 생성
+    chrome_options = Options()
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    # 다운로드 경로 지정
+    prefs = {"download.default_directory": download_path}
+    chrome_options.add_experimental_option("prefs", prefs)
+    with webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=chrome_options) as driver:
         driver.get(target_url)
         driver.implicitly_wait(10)
         
 
 
         set_search_period(driver, start_date, end_date)
-        time.sleep(10)   
+        time.sleep(10)
+
+
+def upload_to_s3(file_path, object_name=None):
+    """
+    S3 버킷으로 파일 업로드
+    - file_path: 업로드할 파일 경로
+    - object_name: S3 버킷 내 파일 이름 (없을 경우 파일명 사용)
+    - return: 성공 여부
+    """
+    # AWS 계정 정보 및 S3 버킷 정보 설정
+    aws_access_key_id = ''
+    aws_secret_access_key = ''
+    bucket_name = ''
+
+    # S3 클라이언트 생성
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+
+    # S3에 업로드할 파일명 설정
+    if object_name is None:
+        object_name = file_path
+
+    try:
+        s3.upload_file(file_path, bucket_name, object_name)
+        print(f"파일 {file_path}을(를) S3 버킷 {bucket_name}에 업로드했습니다.")
+        return True
+    except FileNotFoundError:
+        print(f"파일 {file_path}을(를) 찾을 수 없습니다.")
+        return False
+    except NoCredentialsError:
+        print("AWS 인증 정보가 잘못되었습니다.")
+        return False
+    except Exception as e:
+        print(f"파일 업로드 중 오류 발생: {e}")
+        return False
 
 end_date = datetime.today()
 start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
 price_crawling(start_date,end_date)
+#upload_to_s3("주유소_평균판매가격_제품별.csv")
