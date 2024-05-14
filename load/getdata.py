@@ -67,5 +67,5 @@ def price_crawling(start_date, end_date):
         time.sleep(10)   
 
 end_date = datetime.today()
-start_date = datetime.today() - timedelta(days=365)
+start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
 price_crawling(start_date,end_date)
