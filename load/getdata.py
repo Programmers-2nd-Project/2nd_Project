@@ -63,7 +63,7 @@ def price_crawling(start_date, end_date):
     target_url = "https://www.opinet.co.kr/user/dopospdrg/dopOsPdrgSelect.do#" 
     current_directory = os.getcwd()
 
-    # 다운로드 경로 설정: 현재 작업 디렉토리 + 'downloads' 폴더
+    # 다운로드 경로 설정: 현재 작업 디렉토리 + 'load' 폴더
     download_path = os.path.join(current_directory, 'load')
 
     # ChromeOptions 생성
@@ -72,12 +72,13 @@ def price_crawling(start_date, end_date):
     chrome_options.add_argument("--disable-dev-shm-usage")
 
     # 다운로드 경로 지정
-    prefs = {"download.default_directory": download_path}
+    prefs = {"download.default_directory": download_path,}
     chrome_options.add_experimental_option("prefs", prefs)
     with webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=chrome_options) as driver:
         driver.get(target_url)
         driver.implicitly_wait(10)
-        
+        if os.path.exists("load\주유소_평균판매가격_제품별.csv"):
+            os.remove("load\주유소_평균판매가격_제품별.csv")
 
 
         set_search_period(driver, start_date, end_date)
@@ -120,4 +121,4 @@ def upload_to_s3(file_path, object_name=None):
 end_date = datetime.today()
 start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
 price_crawling(start_date,end_date)
-#upload_to_s3("주유소_평균판매가격_제품별.csv")
+#upload_to_s3("load\주유소_평균판매가격_제품별.csv")
