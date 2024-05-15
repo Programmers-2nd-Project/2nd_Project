@@ -132,6 +132,7 @@ def upload_to_s3(file_path, object_name=None):
 def clean_broken_chars(text):
     # 깨진 문자열을 제거하는 함수
     cleaned_text = text.replace("?", "")
+    cleaned_text = cleaned_text.replace("년","").replace("월","").replace("일","")
     return cleaned_text
 
 end_date = datetime.today()
