@@ -121,4 +121,4 @@ def upload_to_s3(file_path, object_name=None):
 end_date = datetime.today()
 start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
 price_crawling(start_date,end_date)
-#upload_to_s3("load\주유소_평균판매가격_제품별.csv")
+upload_to_s3("load\주유소_평균판매가격_제품별.csv","oilprice.csv")
