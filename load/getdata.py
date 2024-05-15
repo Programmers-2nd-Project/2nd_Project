@@ -125,7 +125,7 @@ def clean_broken_chars(text):
 
 end_date = datetime.today()
 start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
-#price_crawling(start_date,end_date)
+price_crawling(start_date,end_date)
 
 filename ="load\주유소_평균판매가격_제품별.csv"
 output_filename = "oil_price.csv"
