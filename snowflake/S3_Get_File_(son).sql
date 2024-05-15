@@ -21,6 +21,7 @@ CREATE OR REPLACE TABLE pro2.raw_data.oil_price (
     price float);
 
 -- s3에 적재한 데이터 테이블에 복사
+-- Daily_Oil_Price.csv
 COPY INTO pro2.raw_data.oil_price
 FROM '파일 저장된 S3 URL'
 credentials=(AWS_KEY_ID='******' AWS_SECRET_KEY='******')
@@ -45,6 +46,7 @@ create or replace TABLE PRO2.RAW_DATA.Diesel_OIL_DATA (
 );
     
 -- s3에 적재한 데이터 테이블에 복사
+-- Diesel_sido_oil_price.csv
 COPY INTO PRO2.RAW_DATA.Diesel_OIL_DATA
 FROM '파일 저장된 S3 URL'
 credentials=(AWS_KEY_ID='******' AWS_SECRET_KEY='******')
@@ -67,6 +69,7 @@ create or replace TABLE PRO2.RAW_DATA.NG_OIL_DATA (
 );
     
 -- s3에 적재한 데이터 테이블에 복사
+-- NG_sido_oil_price.csv
 COPY INTO PRO2.RAW_DATA.NG_OIL_DATA
 FROM '파일 저장된 S3 URL'
 credentials=(AWS_KEY_ID='******' AWS_SECRET_KEY='******')
