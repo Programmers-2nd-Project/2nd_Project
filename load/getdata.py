@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.options import Options
 import os
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
+import csv
 import time
 from datetime import datetime,timedelta 
 
@@ -117,8 +117,31 @@ def upload_to_s3(file_path, object_name=None):
     except Exception as e:
         print(f"파일 업로드 중 오류 발생: {e}")
         return False
+    
+def clean_broken_chars(text):
+    # 깨진 문자열을 제거하는 함수
+    cleaned_text = text.replace("?", "")
+    return cleaned_text
 
 end_date = datetime.today()
 start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
-price_crawling(start_date,end_date)
-upload_to_s3("load\주유소_평균판매가격_제품별.csv","oilprice.csv")
+#price_crawling(start_date,end_date)
+
+filename ="load\주유소_평균판매가격_제품별.csv"
+output_filename = "oil_price.csv"
+with open(filename, newline='', encoding='EUC-KR') as csvfile:
+    csvreader = csv.reader(csvfile)
+    cleaned_data = []
+    for row in csvreader:
+        # 첫 번째 열의 깨진 문자열을 제거합니다.
+        print(row[0])
+        cleaned_first_column = clean_broken_chars(row[0])
+        # 나머지 열은 그대로 출력합니다.
+        rest_of_columns = row[1:]
+        # 클린업된 첫 번째 열과 나머지 열을 조합하여 출력합니다.
+        cleaned_row = [cleaned_first_column] + rest_of_columns
+        cleaned_data.append(cleaned_row)
+with open(output_filename, 'w', newline='', encoding='utf-8') as csvfile:
+    csvwriter = csv.writer(csvfile)
+    csvwriter.writerows(cleaned_data)
+#upload_to_s3("load\주유소_평균판매가격_제품별.csv","oilprice.csv")
