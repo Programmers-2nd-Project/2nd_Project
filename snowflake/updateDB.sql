@@ -39,8 +39,11 @@ SELECT
     END AS premium_volatility,
 
     CASE WHEN LAG(regular) OVER (ORDER BY DATE) IS NOT NULL THEN (regular - LAG(regular) OVER (ORDER BY DATE))
-        ELSE regular,
+        ELSE regular
+    END AS regular_volatility,
     CASE WHEN LAG(diesel) OVER (ORDER BY DATE) IS NOT NULL THEN (diesel - LAG(diesel) OVER (ORDER BY DATE))
         ELSE diesel
+    END AS diesel_volatility
 FROM
     DEV.RAW_DATA.OIL;
+
