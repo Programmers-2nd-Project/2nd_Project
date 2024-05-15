@@ -33,7 +33,7 @@ def set_search_period(driver, start_date, end_date):
 
     start_day_select = Select(driver.find_element(By.ID,"STA_D"))
     start_day_select.select_by_value(str(start_date.day).zfill(2))
-
+    
     # 종료 날짜 설정
     end_year_select = Select(driver.find_element(By.ID, "END_Y"))
     end_year_select.select_by_value(str(end_date.year))
@@ -43,12 +43,23 @@ def set_search_period(driver, start_date, end_date):
 
     end_day_select = Select(driver.find_element(By.ID,"END_D"))
     end_day_select.select_by_value(str(end_date.day).zfill(2))
-
-    # 검색 버튼 클릭
+    
+    
+    # 검색 버튼 클릭 안 되서 밑에 걸로 진행
+    # date_search_btn = WebDriverWait(driver, 10).until(
+    #     EC.element_to_be_clickable((By.CLASS_NAME, "btn_type1"))
+    # )
+    # time.sleep(10)
+    # date_search_btn.click()
+    
+    # 검색 버튼 클릭 이걸로 진행
     date_search_btn = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.CLASS_NAME, "btn_type1"))
     )
-    date_search_btn.click()
+    
+    driver.execute_script("arguments[0].click();", date_search_btn)
+    time.sleep(10)
+
     csv_save_btn = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable((By.ID, "btn_Csv"))
     )
@@ -125,6 +136,7 @@ def clean_broken_chars(text):
 
 end_date = datetime.today()
 start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
+
 price_crawling(start_date,end_date)
 
 filename ="load\주유소_평균판매가격_제품별.csv"
