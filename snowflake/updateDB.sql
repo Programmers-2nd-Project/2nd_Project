@@ -21,3 +21,21 @@ FILE_FORMAT = (
     DATE_FORMAT='YYYYMMDD'
 
 );
+
+
+CREATE OR REPLACE TABLE DEV.RAW_DATA.OIL_VOLATILITY (
+    DATE DATE,
+    premium_volatility DECIMAL,
+    regular_volatility DECIMAL,
+    diesel_volatility DECIMAL
+);
+
+
+INSERT INTO DEV.RAW_DATA.OIL_VOLATILITY (DATE, premium_volatility, regular_volatility, diesel_volatility)
+SELECT
+    DATE,
+    (premium - LAG(premium) OVER (ORDER BY DATE)) AS premium_volatility,
+    (regular - LAG(regular) OVER (ORDER BY DATE)) AS regular_volatility,
+    (diesel - LAG(diesel) OVER (ORDER BY DATE))  AS diesel_volatility
+FROM
+    DEV.RAW_DATA.OIL;
