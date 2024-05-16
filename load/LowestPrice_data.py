@@ -27,6 +27,20 @@ area_df
 ## 지역별 최저가 20개
 all_results = []
 
+brand_mapping = {
+    'SKE': 'SK에너지',
+    'GSC': 'GS칼텍스',
+    'HDO': '현대오일뱅크',
+    'SOL': 'S-OIL',
+    'RTE': '자영알뜰',
+    'RTX': '고속도로알뜰',
+    'NHO': '농협알뜰',
+    'ETC': '자가상표',
+    'E1G': 'E1',
+    'SKG': 'SK가스',
+    'RTO': '기타'
+}
+
 # 각 지역에 대해 데이터를 가져오고, AREA_NM을 함께 결과에 추가하여 리스트에 저장
 for area_data in area_result['RESULT']['OIL']:
     area_cd = area_data['AREA_CD']
@@ -40,5 +54,7 @@ for area_data in area_result['RESULT']['OIL']:
 
 # 결과 출력/저장
 final_result = pd.concat(all_results, ignore_index=True)
-# final_result
-final_result.to_csv('LowestPrice.csv', index=False, encoding="utf-8-sig")
+df = pd.DataFrame(final_result)
+df['POLL_DIV_CO'] = df['POLL_DIV_CO'].map(brand_mapping)
+
+df.to_csv('LowestPrice.csv', index=False, encoding="utf-8-sig")
