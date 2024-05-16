@@ -10,7 +10,7 @@ def main():
     # 데이터 수집
     url = f"http://www.opinet.co.kr/api/avgSidoPrice.do?out=xml&code={code}&prodcd={prodcd}"
     res = requests.get(url)
-    soup = BeautifulSoup(res.text, 'lxml')
+    soup = BeautifulSoup(res.text, 'xml')
 
     # XML 데이터 파싱
     all_data = soup.find_all("OIL")
