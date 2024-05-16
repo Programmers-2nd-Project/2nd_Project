@@ -13,7 +13,7 @@ import time
 def main():
     # 데이터 수집
     res = requests.get("http://www.opinet.co.kr/api/avgSidoPrice.do?out=xml&code=******&prodcd=B027")
-    soup = BeautifulSoup(res.text, 'lxml')
+    soup = BeautifulSoup(res.text, 'xml')
 
     # XML 데이터 파싱
     all_data = soup.find_all("OIL")

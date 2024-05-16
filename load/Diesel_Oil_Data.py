@@ -12,7 +12,7 @@ import time
 
 def main():
     # 데이터 수집
-    res = requests.get("http://www.opinet.co.kr/api/avgSidoPrice.do?out=xml&code=******&prodcd=D047")
+    res = requests.get("http://www.opinet.co.kr/api/avgSidoPrice.do?out=xml&code=F240513147&prodcd=D047")
     soup = BeautifulSoup(res.text, 'xml')
 
     # XML 데이터 파싱
