@@ -8,7 +8,8 @@ import boto3
 # 파일 저장 자동화
 import schedule
 import time
-
+# pip install snowflake-connector-python
+import snowflake.connector
 
 def main():
     # 데이터 수집
@@ -71,6 +72,7 @@ def main():
 
     # CSV 파일로 저장
     data_frame.to_csv(r"datafile\NG_sido_oil_price.csv", header=None, index=False, encoding='utf-8-sig', mode='w')
+    print("csv file download complete")
     
     # S3에 바로 저장 사용 예시
     file_name = r"datafile\NG_sido_oil_price.csv" # 파일 경로
@@ -82,11 +84,56 @@ def main():
         print(f'{file_name} uploaded successfully to {bucket_name} as {object_name}.')
     else:
         print(f'Failed to upload {file_name} to {bucket_name}.')
+        
+    # snowflake
+    conn = snowflake.connector.connect(
+    user='', # snowflake ID
+    password='', # snowflake password
+    account='', # snowflake Locator ex) XQB*****
+    warehouse='COMPUTE_WH',
+    database='PROJ',
+    schema='RAW_DATA'
+    )
+
+    # SQL 쿼리 실행
+    try:
+        cursor = conn.cursor()
+        
+        # 테이블 생성 쿼리 실행
+        cursor.execute("""
+            CREATE OR REPLACE TABLE PROJ.RAW_DATA.NG_OIL_DATA (
+                CODE NUMBER(38,0),
+                SIDO VARCHAR(16777216),
+                PRICE NUMBER(38,2),
+                LATITUDE NUMBER(38,4),
+                LONGITUDE NUMBER(38,4),
+                ISO_CODE VARCHAR(16777216)
+            )
+        """)
+        
+        # S3 데이터를 테이블에 복사하는 쿼리 실행
+        cursor.execute("""
+            COPY INTO PROJ.RAW_DATA.NG_OIL_DATA
+            FROM 's3://doyoung-test-bucket/proj2/NG_sido_oil_price.csv'
+            CREDENTIALS=(
+                AWS_KEY_ID=''
+                AWS_SECRET_KEY=''
+            )
+            FILE_FORMAT = (type='CSV' skip_header=0 FIELD_OPTIONALLY_ENCLOSED_BY='"')
+        """)
+        
+        cursor.close()
+        
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        conn.close()
+    print("Snowflake Process Complete")
 
 
 # 매일 정해진 시간에 작업을 실행하도록 스케줄링
 schedule.every().day.at("09:00").do(main)
-
+# schedule.every(10).seconds.do(main)
 
 # S3 업로드 하는 코드
 # 터미널에서 aws configure 실행 후 s3 버킷 권한 있는 aws 사용자의 액세스 키, 시크릿 키, 리전 입력하고 사용
