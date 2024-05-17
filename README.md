@@ -22,5 +22,5 @@
 ![프로그래머스 2차 프로젝트 ERD drawio](https://github.com/Programmers-2nd-Project/2nd_Project/assets/166678994/6710bcde-2a83-4e78-b993-4f897ef47a66)
 
 ### DashBoard 결과물
-
+![2-차프로젝트-3-팀-2-조-2024-05-17T07-12-16 085Z](https://github.com/Programmers-2nd-Project/2nd_Project/assets/77647785/3bcaf899-0066-430e-9456-8e7e1ff62c26)
 ### 기대효과 및 보안점
