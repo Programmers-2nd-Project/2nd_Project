@@ -1,7 +1,5 @@
 
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
@@ -12,11 +10,12 @@ from selenium.webdriver.support import expected_conditions as EC
 import csv
 import time
 from datetime import datetime,timedelta 
-
 from selenium.webdriver.support.ui import Select
-
 import boto3
 from botocore.exceptions import NoCredentialsError
+import snowflake.connector
+import schedule
+import time
 
 
 def set_search_period(driver, start_date, end_date):
@@ -66,7 +65,7 @@ def set_search_period(driver, start_date, end_date):
     driver.execute_script("arguments[0].click();", csv_save_btn)
     
 
-    time.sleep(10)
+    time.sleep(1)
 
 def price_crawling(start_date, end_date):
 
@@ -93,7 +92,7 @@ def price_crawling(start_date, end_date):
 
 
         set_search_period(driver, start_date, end_date)
-        time.sleep(10)
+        time.sleep(1)
 
 
 def upload_to_s3(file_path, object_name=None):
@@ -134,27 +133,94 @@ def clean_broken_chars(text):
     cleaned_text = text.replace("?", "")
     cleaned_text = cleaned_text.replace("년","").replace("월","").replace("일","")
     return cleaned_text
+def my_task():
+    end_date = datetime.today()
+    start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
 
-end_date = datetime.today()
-start_date = datetime.today() - timedelta(days=365)#오늘부터 며칠 전까지 조회할지
+    price_crawling(start_date,end_date)
 
-price_crawling(start_date,end_date)
+    filename ="load\주유소_평균판매가격_제품별.csv"
+    output_filename = "oil_price.csv"
+    with open(filename, newline='', encoding='EUC-KR') as csvfile:
+        csvreader = csv.reader(csvfile)
+        cleaned_data = []
+        for row in csvreader:
+            # 첫 번째 열의 깨진 문자열을 제거합니다.
+            print(row[0])
+            cleaned_first_column = clean_broken_chars(row[0])
+            # 나머지 열은 그대로 출력합니다.
+            rest_of_columns = row[1:]
+            # 클린업된 첫 번째 열과 나머지 열을 조합하여 출력합니다.
+            cleaned_row = [cleaned_first_column] + rest_of_columns
+            cleaned_data.append(cleaned_row)
+    with open(output_filename, 'w', newline='', encoding='utf-8') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerows(cleaned_data)
+    upload_to_s3("load\주유소_평균판매가격_제품별.csv","oilprice.csv")
 
-filename ="load\주유소_평균판매가격_제품별.csv"
-output_filename = "oil_price.csv"
-with open(filename, newline='', encoding='EUC-KR') as csvfile:
-    csvreader = csv.reader(csvfile)
-    cleaned_data = []
-    for row in csvreader:
-        # 첫 번째 열의 깨진 문자열을 제거합니다.
-        print(row[0])
-        cleaned_first_column = clean_broken_chars(row[0])
-        # 나머지 열은 그대로 출력합니다.
-        rest_of_columns = row[1:]
-        # 클린업된 첫 번째 열과 나머지 열을 조합하여 출력합니다.
-        cleaned_row = [cleaned_first_column] + rest_of_columns
-        cleaned_data.append(cleaned_row)
-with open(output_filename, 'w', newline='', encoding='utf-8') as csvfile:
-    csvwriter = csv.writer(csvfile)
-    csvwriter.writerows(cleaned_data)
-#upload_to_s3("load\주유소_평균판매가격_제품별.csv","oilprice.csv")
+    sf_config  = {
+        "account": "", 
+        "user": "",
+        "password": "",
+        }  
+    conn = snowflake.connector.connect(**sf_config)
+    conn.cursor().execute("DELETE FROM DEV.RAW_DATA.OIL")
+    conn.cursor().execute("""
+        CREATE OR REPLACE TABLE DEV.RAW_DATA.OIL (
+            DATE DATE,
+            premium DECIMAL,
+            regular DECIMAL,
+            diesel DECIMAL,
+            etc DECIMAL
+        )
+    """)
+
+    # COPY INTO 문 실행
+    copy_into_sql = f"""
+        COPY INTO DEV.RAW_DATA.OIL
+        FROM 's3://mybucket1qwd/oilprice/oil_price.csv'
+        credentials=(
+            AWS_KEY_ID=''
+            AWS_SECRET_KEY=''
+        )
+        FILE_FORMAT = (
+            TYPE='CSV'
+            SKIP_HEADER=1
+            FIELD_OPTIONALLY_ENCLOSED_BY='"'
+            DATE_FORMAT='YYYYMMDD'
+        )
+    """
+    conn.cursor().execute(copy_into_sql)
+
+    # CREATE TABLE 문 실행
+    conn.cursor().execute("""
+        CREATE OR REPLACE TABLE DEV.RAW_DATA.OIL_VOLATILITY (
+            DATE DATE,
+            premium_volatility DECIMAL,
+            regular_volatility DECIMAL,
+            diesel_volatility DECIMAL
+        )
+    """)
+
+    # INSERT INTO 문 실행
+    insert_into_sql = """
+        INSERT INTO DEV.RAW_DATA.OIL_VOLATILITY (DATE, premium_volatility, regular_volatility, diesel_volatility)
+        SELECT
+            DATE,
+            (premium - LAG(premium) OVER (ORDER BY DATE)),
+            (regular - LAG(regular) OVER (ORDER BY DATE)),
+            (diesel - LAG(diesel) OVER (ORDER BY DATE))
+        FROM
+            DEV.RAW_DATA.OIL
+    """
+    conn.cursor().execute(insert_into_sql)
+
+
+# 매일 정해진 시간에 작업을 실행하도록 스케줄링
+
+schedule.every().day.at("17:06").do(my_task)
+
+# 스케줄러 실행
+while True:
+    schedule.run_pending()
+    time.sleep(1)

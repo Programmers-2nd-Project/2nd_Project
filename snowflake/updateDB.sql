@@ -1,3 +1,4 @@
+
 DELETE FROM DEV.RAW_DATA.OIL;
 
 create or replace TABLE DEV.RAW_DATA.OIL (
@@ -9,7 +10,7 @@ create or replace TABLE DEV.RAW_DATA.OIL (
 );
 
 COPY INTO dev.raw_data.oil
-FROM 's3://mybucket1qwd/oilprice/oil_price.csv'
+FROM ''
 credentials=(
     AWS_KEY_ID=''
     AWS_SECRET_KEY=''
@@ -21,6 +22,13 @@ FILE_FORMAT = (
     DATE_FORMAT='YYYYMMDD'
 
 );
+CREATE OR REPLACE TABLE DEV.RAW_DATA.OIL_VOLATILITY (
+    DATE DATE,
+    premium_volatility DECIMAL,
+    regular_volatility DECIMAL,
+    diesel_volatility DECIMAL
+);
+
 
 
 CREATE OR REPLACE TABLE DEV.RAW_DATA.OIL_VOLATILITY (
@@ -34,8 +42,10 @@ CREATE OR REPLACE TABLE DEV.RAW_DATA.OIL_VOLATILITY (
 INSERT INTO DEV.RAW_DATA.OIL_VOLATILITY (DATE, premium_volatility, regular_volatility, diesel_volatility)
 SELECT
     DATE,
-    (premium - LAG(premium) OVER (ORDER BY DATE)) AS premium_volatility,
-    (regular - LAG(regular) OVER (ORDER BY DATE)) AS regular_volatility,
-    (diesel - LAG(diesel) OVER (ORDER BY DATE))  AS diesel_volatility
+    (premium - LAG(premium) OVER (ORDER BY DATE)),
+
+    (regular - LAG(regular) OVER (ORDER BY DATE)),
+    (diesel - LAG(diesel) OVER (ORDER BY DATE)),
 FROM
     DEV.RAW_DATA.OIL;
+

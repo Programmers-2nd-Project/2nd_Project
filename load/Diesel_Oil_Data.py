@@ -2,11 +2,19 @@ import requests
 from bs4 import BeautifulSoup
 # pip install lxml
 import pandas as pd
+import os
+import boto3
+
+# 파일 저장 자동화
+import schedule
+import time
+# pip install snowflake-connector-python
+import snowflake.connector
 
 def main():
     # 데이터 수집
     res = requests.get("http://www.opinet.co.kr/api/avgSidoPrice.do?out=xml&code=******&prodcd=D047")
-    soup = BeautifulSoup(res.text, 'lxml')
+    soup = BeautifulSoup(res.text, 'xml')
 
     # XML 데이터 파싱
     all_data = soup.find_all("OIL")
@@ -50,6 +58,94 @@ def main():
 
     # CSV 파일로 저장
     data_frame.to_csv(r"datafile\Diesel_sido_oil_price.csv", header=None, index=False, encoding='utf-8-sig', mode='w')
+    print("csv file download complete")
+    
+    # S3에 바로 저장 사용 예시
+    file_name = r"datafile\Diesel_sido_oil_price.csv" # 파일 경로
+    bucket_name = 'doyoung-test-bucket' # 본인 버킷 이름
+    object_name = 'proj2/Diesel_sido_oil_price.csv'  # 버킷 내의 특정 경로에 저장할 수 있도록 지정 >> 버킷내의 폴더 이름/csv저장 파일 이름
 
-if __name__ == "__main__":
-    main()
+    upload_successful = upload_csv_to_s3(file_name, bucket_name, object_name)
+    if upload_successful:
+        print(f'{file_name} uploaded successfully to {bucket_name} as {object_name}.')
+    else:
+        print(f'Failed to upload {file_name} to {bucket_name}.')
+        
+    # snowflake
+    conn = snowflake.connector.connect(
+    user='', # snowflake ID
+    password='', # snowflake password
+    account='', # snowflake Locator ex) XQB*****
+    warehouse='COMPUTE_WH',
+    database='PROJ',
+    schema='RAW_DATA'
+    )
+
+    # SQL 쿼리 실행
+    try:
+        cursor = conn.cursor()
+        
+        # 테이블 생성 쿼리 실행
+        cursor.execute("""
+            CREATE OR REPLACE TABLE PROJ.RAW_DATA.DIESEL_OIL_DATA (
+                CODE NUMBER(38,0),
+                SIDO VARCHAR(16777216),
+                PRICE NUMBER(38,2),
+                LATITUDE NUMBER(38,4),
+                LONGITUDE NUMBER(38,4),
+                ISO_CODE VARCHAR(16777216)
+            )
+        """)
+        
+        # S3 데이터를 테이블에 복사하는 쿼리 실행
+        cursor.execute("""
+            COPY INTO PROJ.RAW_DATA.DIESEL_OIL_DATA
+            FROM 's3://doyoung-test-bucket/proj2/Diesel_sido_oil_price.csv'
+            CREDENTIALS=(
+                AWS_KEY_ID=''
+                AWS_SECRET_KEY=''
+            )
+            FILE_FORMAT = (type='CSV' skip_header=0 FIELD_OPTIONALLY_ENCLOSED_BY='"')
+        """)
+        
+        cursor.close()
+        
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        conn.close()
+    print("Snowflake Process Complete")
+
+
+# 매일 정해진 시간에 작업을 실행하도록 스케줄링
+schedule.every().day.at("09:00").do(main)
+# schedule.every(10).seconds.do(main)
+
+# S3 업로드 하는 코드
+# 터미널에서 aws configure 실행 후 s3 버킷 권한 있는 aws 사용자의 액세스 키, 시크릿 키, 리전 입력하고 사용
+# 연결됐는지 확인하려면 터미널에서 >> aws s3 ls 했을 때 자신의 버킷이 나와야 함
+# 이후 코드 실행하면 s3로 저장됨
+def upload_csv_to_s3(file_name, bucket_name, object_name=None):
+    """Upload a CSV file to an S3 bucket."""
+    if object_name is None:
+        object_name = os.path.basename(file_name)  # 파일 이름을 기반으로 객체 키 생성
+    
+    # Create an S3 client
+    s3_client = boto3.client('s3')
+    
+    try:
+        # Upload the file
+        response = s3_client.upload_file(file_name, bucket_name, object_name)
+    except Exception as e:
+        print(e)
+        return False
+    return True
+
+
+# 스케줄러 실행
+while True:
+    schedule.run_pending()
+    time.sleep(1)
+
+# if __name__ == "__main__":
+#     main()
