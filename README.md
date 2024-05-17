@@ -9,6 +9,7 @@
 
 ### 진행과정 및 팀원 역할
 
+| 이름 | 역할 | 깃헙 |
 | :---: | :---: | :---: |
 | 곽도영 | 데이터 수집 및 ETL, 대시보드 개발 | https://github.com/dooby99 |
 | 손봉호 | 데이터 수집 및 ETL, 대시보드 개발 | https://github.com/bongHsss |
